@@ -1,0 +1,247 @@
+<form method="post" action="/register">
+    <!-- 다른 입력 필드들... -->
+    
+    <!-- 첫 번째 비밀번호 입력 필드 -->
+    <div>
+        <label for="password">비밀번호:</label>
+        <input type="password" id="password" name="password">
+    </div>
+
+    <!-- 두 번째 비밀번호 확인 필드 -->
+    <div>
+        <label for="confirmPassword">비밀번호 확인:</label>
+        <input type="password" id="confirmPassword" name="confirmPassword">
+    </div>
+
+    <!-- 회원가입 버튼 -->
+    <button type="submit">회원가입</button>
+</form>
+
+
+<script>
+    // 폼 전송 이벤트 리스너 추가
+    document.querySelector('form').addEventListener('submit', function(event) {
+        // 비밀번호와 비밀번호 확인 필드의 값을 가져옴
+        var password = document.getElementById('password').value;
+        var confirmPassword = document.getElementById('confirmPassword').value;
+
+        // 비밀번호와 비밀번호 확인이 일치하는지 확인
+        if (password !== confirmPassword) {
+            // 일치하지 않으면 폼 전송을 막고 사용자에게 메시지를 표시
+            event.preventDefault();
+            alert('비밀번호가 일치하지 않습니다.');
+        }
+    });
+</script>
+
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import com.example.dto.MemberDto;
+
+@Controller
+public class MemberController {
+
+    @PostMapping("/register")
+    public String register(@ModelAttribute("memberDto") MemberDto memberDto,
+                           @RequestParam("confirmPassword") String confirmPassword,
+                           BindingResult bindingResult,
+                           RedirectAttributes redirectAttributes) {
+        // 비밀번호와 비밀번호 확인이 일치하지 않으면 에러를 추가하고 회원가입 페이지로 리다이렉트
+        if (!memberDto.getPassword().equals(confirmPassword)) {
+            bindingResult.rejectValue("password", "error.password", "비밀번호가 일치하지 않습니다.");
+            return "redirect:/register"; // 회원가입 페이지로 리다이렉트
+        }
+
+        // 비밀번호 확인이 일치하면 회원가입 로직 수행
+        // 여기에 회원가입 서비스 호출 등의 로직 추가
+
+        // 성공적으로 가입되었음을 알리는 메시지를 Flash 속성에 추가
+        redirectAttributes.addFlashAttribute("successMessage", "회원가입이 완료되었습니다.");
+
+        return "redirect:/login"; // 로그인 페이지로 리다이렉트
+    }
+}
+
+
+
+
+
+
+import com.stripe.Stripe;
+import com.stripe.model.Charge;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class PaymentService {
+
+    @Value("${stripe.api.key}")
+    private String stripeApiKey;
+
+    public String chargeCreditCard(String token, double amount, String currency) throws Exception {
+        Stripe.apiKey = stripeApiKey;
+
+        Map<String, Object> chargeParams = new HashMap<>();
+        chargeParams.put("amount", (int)(amount * 100)); // 금액을 센트 단위로 변환
+        chargeParams.put("currency", currency);
+        chargeParams.put("source", token); // 카드 토큰
+        chargeParams.put("description", "결제 설명");
+
+        Charge charge = Charge.create(chargeParams);
+
+        return charge.getId();
+    }
+}
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class PaymentController {
+
+    @Autowired
+    private PaymentService paymentService;
+
+    @PostMapping("/charge")
+    public ResponseEntity<String> chargeCreditCard(@RequestBody ChargeRequest chargeRequest) {
+        try {
+            String chargeId = paymentService.chargeCreditCard(chargeRequest.getToken(), chargeRequest.getAmount(), chargeRequest.getCurrency());
+            return ResponseEntity.ok("결제가 성공적으로 완료되었습니다. Charge ID: " + chargeId);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("결제 처리 중 오류가 발생했습니다.");
+        }
+    }
+}
+
+public class ChargeRequest {
+
+    private String token; // 카드 토큰
+    private double amount; // 결제 금액
+    private String currency; // 통화
+
+    // 생성자, 게터/세터 등 생략
+}
+
+
+
+
+
+
+
+   <script>
+        function checkEmailAvailability() {
+            var email = document.getElementById("email").value;
+            // 이메일 중복 확인을 위한 Ajax 요청
+            // 서버에서는 입력한 이메일이 이미 존재하는지 확인하는 로직을 수행합니다.
+            // 이후 사용 가능한 이메일인지 여부에 따라 적절한 메시지를 클라이언트에 반환합니다.
+            // 예를 들어, "사용 가능한 이메일입니다." 또는 "이미 사용 중인 이메일입니다." 등의 메시지를 표시할 수 있습니다.
+        }
+    </script> 아이디중복확인 메세지
+    
+    
+    html
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입</title>
+</head>
+<body>
+    <h2>회원가입</h2>
+    <form id="signupForm" action="/signup" method="post">
+        <label for="email">이메일:</label>
+        <input type="email" id="email" name="email" required>
+        <span id="emailError" style="color: red;"></span><br>
+        <label for="password">비밀번호:</label>
+        <input type="password" id="password" name="password" required><br>
+        <button type="submit" id="signupButton">회원가입</button>
+    </form>
+
+    <script>
+        document.getElementById("email").addEventListener("blur", function() {
+            var email = this.value;
+            var emailError = document.getElementById("emailError");
+            var signupButton = document.getElementById("signupButton");
+
+            // 이메일 중복 확인 요청
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "/checkEmailAvailability?email=" + email, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        var response = JSON.parse(xhr.responseText);
+                        if (response.available) {
+                            emailError.textContent = ""; // 이메일 사용 가능한 경우
+                            signupButton.disabled = false; // 회원가입 버튼 활성화
+                        } else {
+                            emailError.textContent = "이미 사용 중인 이메일입니다."; // 이메일 중복 시 메시지 표시
+                            signupButton.disabled = true; // 회원가입 버튼 비활성화
+                        }
+                    }
+                }
+            };
+            xhr.send();
+        });
+    </script>
+</body>
+</html>
+    
+
+
+
+서비스 클래스에서 생년월일 확인 및 쿠폰 적용:
+
+@Service
+public class CouponService {
+
+    public void applyBirthdayDiscount(CustomUserDetails userDetails) {
+        String birth = userDetails.getBirth();
+        // 생년월일 확인 로직
+        LocalDate birthDate = LocalDate.parse(birth); // 예: "1990-01-01" 형식일 경우
+        LocalDate today = LocalDate.now();
+
+        if (birthDate.getMonth() == today.getMonth() && birthDate.getDayOfMonth() == today.getDayOfMonth()) {
+            // 쿠폰 적용 로직
+            System.out.println("생일 축하 쿠폰이 적용되었습니다.");
+            // 예: 쿠폰 발행 또는 할인 적용
+        }
+    }
+}
+
+
+컨트롤러에서 서비스 메서드 호출:
+@RestController
+@RequestMapping("/api")
+public class CouponController {
+
+    @Autowired
+    private CouponService couponService;
+
+    @GetMapping("/applyBirthdayCoupon")
+    public ResponseEntity<String> applyBirthdayCoupon(Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        couponService.applyBirthdayDiscount(userDetails);
+        return ResponseEntity.ok("쿠폰 적용 완료");
+    }
+}
+
+
+
+
+
+
